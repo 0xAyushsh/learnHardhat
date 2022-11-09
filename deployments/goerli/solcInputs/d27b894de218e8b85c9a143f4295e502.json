@@ -1,0 +1,41 @@
+{
+  "language": "Solidity",
+  "sources": {
+    "contracts/Auction.sol": {
+      "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\ncontract Auction{\n\n    //static\n    address public immutable owner;\n    string public constant productURI = \"www.google.com\" ;\n    uint public endTime ; \n    uint public minBid ;\n    uint public highestBid;\n    address public highestBidder;\n    bool public auctionCancelled;\n    mapping(address => uint) public fundsByBidder; \n\n    constructor(uint numberOfHours,uint _minBid){\n        owner = msg.sender;\n        minBid = _minBid * 1 ether;\n        endTime = block.timestamp + numberOfHours *  1 hours;\n        auctionCancelled = false;\n    }\n\n    event logHighestBid(address highestBidder , uint highestBid);\n    event logAuctionCancelled();\n    event LogWithdrawal(address sender, address withdrawalAccount, uint withdrawalAmount);\n\n    modifier allowedTime(){\n        require(block.timestamp < endTime, \" Auction has ended\");\n        _;\n    }\n\n    modifier auctionNotCancelled(){\n        require(!auctionCancelled, \" Auction has been cancelled\");\n        _;\n    }\n\n    modifier onlyOwner(){\n        require(msg.sender == owner, \"Only owner is allowed\");\n        _;\n    }\n\n    modifier notOwner(){\n        require(msg.sender != owner, \"Owner not allowed \");\n        _;\n    }\n\n\n    function bid() public allowedTime auctionNotCancelled notOwner payable returns(bool success){\n        uint currentBid = fundsByBidder[msg.sender] + msg.value;\n        if(currentBid < minBid) revert(\"Bidding less than minimum bid is not allowed\");\n        if(currentBid <= highestBid) revert(\"Bid is less than highest bid\");\n        highestBid = currentBid;\n        highestBidder = msg.sender;\n        fundsByBidder[msg.sender] += msg.value;\n        emit logHighestBid(highestBidder , highestBid);\n        return true;\n    }\n\n    function cancelAuction() onlyOwner allowedTime auctionNotCancelled public returns(bool success){\n        auctionCancelled = true;\n        emit logAuctionCancelled();\n        return true;\n    }\n\n    function withdrawFund()  public payable returns(bool success){\n        if(!auctionCancelled && (highestBidder == msg.sender)) revert(\"Highest bidder is not allowed\");\n        uint withdrawalAmount = 0;\n        address withdrawalAccount;\n        if(block.timestamp < endTime ){\n            if(msg.sender == owner) revert();\n            withdrawalAccount = msg.sender;\n            withdrawalAmount = fundsByBidder[withdrawalAccount];\n        }else{\n\n            if(msg.sender == owner){    \n                withdrawalAccount = highestBidder;\n                withdrawalAmount = highestBid;\n            }else{\n                withdrawalAccount = msg.sender;\n                withdrawalAmount = fundsByBidder[withdrawalAccount];\n            }\n        }\n\n        if(withdrawalAmount == 0) revert();\n\n        fundsByBidder[withdrawalAccount] -= withdrawalAmount;\n        (bool sent, bytes memory data) = withdrawalAccount.call{value: withdrawalAmount}(\"\");\n        require(sent, \"Failed to send Ether\");\n        emit LogWithdrawal(msg.sender, withdrawalAccount, withdrawalAmount);\n        return true;\n\n    }\n\n\n}"
+    },
+    "contracts/Counter.sol": {
+      "content": "// SPDX-License-Identifier: MIT\n\npragma solidity ^0.8.0;\n\ncontract Counter {\n    uint8 private count;\n\n    function getCount() public view returns (uint8) {\n        return count;\n    }\n\n    function increment() public {\n        count += 1;\n    }\n\n    function decrement() public {\n        count -= 1;\n    }\n}"
+    },
+    "contracts/Task.sol": {
+      "content": "// SPDX-License-Identifier:MIT\n\npragma solidity ^0.8.0;\n\ncontract TaskContract {\n    // Type Declarations\n    enum Status {\n        New,\n        InProgress,\n        Closed\n    }\n    struct Task {\n        address assignee;\n        string description;\n        Status status;\n    }\n\n    address public owner;\n\n    // Task 1 - Index out of Range\n    // Check in taskInprogress, taskClosed, getTaskDetails\n    // whether the index provided as input is within the range of values acceptable\n\n    // Task 1.5 - Throw Error\n    // If index is out of range throw Error Message \"Index out of Range\"\n\n    // Task 2 - Set an owner to this contract\n\n    // Task 3 - Use Modifier whether necessary to optimize code.\n\n    constructor() {\n        owner = msg.sender;\n    }\n\n    modifier indexRange(uint index) {\n        require(index < taskManager.length, \"Index out of Range\");\n        _;\n    }\n\n    Task[] public taskManager;\n\n    function addNewTask(address asign, string memory desc) public {\n        taskManager.push(Task(asign, desc, Status.New));\n    }\n\n    function taskInprogress(uint index) public indexRange(index) {\n        taskManager[index].status = Status.InProgress;\n    }\n\n    function getTaskDetails(uint index)\n        public\n        view\n        indexRange(index)\n        returns (Task memory)\n    {\n        return taskManager[index];\n    }\n\n    function taskClosed(uint index) public indexRange(index) {\n        taskManager[index].status = Status.Closed;\n    }\n}"
+    }
+  },
+  "settings": {
+    "optimizer": {
+      "enabled": false,
+      "runs": 200
+    },
+    "outputSelection": {
+      "*": {
+        "*": [
+          "abi",
+          "evm.bytecode",
+          "evm.deployedBytecode",
+          "evm.methodIdentifiers",
+          "metadata",
+          "devdoc",
+          "userdoc",
+          "storageLayout",
+          "evm.gasEstimates"
+        ],
+        "": [
+          "ast"
+        ]
+      }
+    },
+    "metadata": {
+      "useLiteralContent": true
+    }
+  }
+}
